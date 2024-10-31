@@ -1,0 +1,11 @@
+# Ignorowanie plików CSV
+*.csv
+
+# Ignorowanie plików Pythona
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignorowanie plików IDE
+.vscode/
+.idea/
