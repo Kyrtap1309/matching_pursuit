@@ -1,5 +1,3 @@
-# Ignorowanie plików CSV
-*.csv
 
 # Ignorowanie plików Pythona
 __pycache__/
