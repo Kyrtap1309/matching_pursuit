@@ -1,98 +1,104 @@
 import numpy as np
 import pandas as pd
 
-from matching_pursuit import matching_pursuit
+# Wczytanie danych z pliku CSV, ograniczenie do 20 pierwszych wierszy
+filename = "cy.csv"  # Podaj nazwę pliku
+data = pd.read_csv(filename).iloc[:20]  # Wybieramy pierwsze 20 wierszy
 
-N = 20 #Liczba wczytywanych wierszy
-file_name = "cy"
+# Tworzenie punktów danych bez skalowania
+data_points = [
+    (row[:6], row[6])  # Pierwsze 6 kolumn jako wektor i ostatnia kolumna jako wartość funkcji
+    for row in data.values
+]
 
-# Ponownie definiujemy przekształcanie stopni na radiany
+# Przekształcanie stopni na radiany
 def to_radians(x):
     return np.radians(x)
 
-# Funkcje bazowe i ich kombinacje
 # Rozszerzony słownik funkcji trygonometrycznych i ich kombinacji z normalizacją
-def g1(x): return np.sin(to_radians(x[0])) / np.sqrt(N)
-def g2(x): return np.cos(to_radians(x[0])) / np.sqrt(N)
-def g3(x): return np.sin(to_radians(x[1])) / np.sqrt(N)
-def g4(x): return np.cos(to_radians(x[1])) / np.sqrt(N)
-def g5(x): return np.sin(to_radians(x[2])) / np.sqrt(N)
-def g6(x): return np.cos(to_radians(x[2])) / np.sqrt(N)
-def g7(x): return np.sin(to_radians(x[3])) / np.sqrt(N)
-def g8(x): return np.cos(to_radians(x[3])) / np.sqrt(N)
-def g9(x): return np.sin(to_radians(x[4])) / np.sqrt(N)
-def g10(x): return np.cos(to_radians(x[4])) / np.sqrt(N)
-def g11(x): return np.sin(to_radians(x[5])) / np.sqrt(N)
-def g12(x): return np.cos(to_radians(x[5])) / np.sqrt(N)
+# Funkcje bazowe
+def g1(x): return np.sin(x[0]) / 10
+def g2(x): return np.cos(x[0]) / 10
+def g3(x): return np.sin(x[1]) / 10
+def g4(x): return np.cos(x[1]) / 10
+def g5(x): return np.sin(x[2]) / 10
+def g6(x): return np.cos(x[2]) / 10
+def g7(x): return np.sin(x[3]) / 10
+def g8(x): return np.cos(x[3]) / 10
+def g9(x): return np.sin(x[4]) / np.sqrt(len(data_points))
+def g10(x): return np.cos(x[4]) / np.sqrt(len(data_points))
+def g11(x): return np.sin(x[5]) / np.sqrt(len(data_points))
+def g12(x): return np.cos(x[5]) / np.sqrt(len(data_points))
 
 # Kombinacje funkcji
-def g13(x): return (np.sin(to_radians(x[0])) * np.cos(to_radians(x[1]))) / np.sqrt(N)
-def g14(x): return (np.sin(to_radians(x[2])) * np.cos(to_radians(x[3]))) / np.sqrt(N)
-def g15(x): return (np.sin(to_radians(x[4])) * np.cos(to_radians(x[5]))) / np.sqrt(N)
-def g16(x): return (np.sin(to_radians(x[0])) * np.sin(to_radians(x[2]))) / np.sqrt(N)
-def g17(x): return (np.cos(to_radians(x[1])) * np.cos(to_radians(x[3]))) / np.sqrt(N)
-def g18(x): return (np.sin(to_radians(x[0]))**2) / np.sqrt(N)
-def g19(x): return (np.cos(to_radians(x[1]))**2) / np.sqrt(N)
-def g20(x): return (np.sin(to_radians(x[2]))**2) / np.sqrt(N)
-def g21(x): return (np.cos(to_radians(x[3]))**2) / np.sqrt(N)
-def g22(x): return (np.sin(to_radians(x[4]))**2) / np.sqrt(N)
-def g23(x): return (np.cos(to_radians(x[5]))**2) / np.sqrt(N)
-def g24(x): return (np.sin(to_radians(x[0] + x[1] + x[2]))) / np.sqrt(N)
-def g25(x): return (np.cos(to_radians(x[3] + x[4] + x[5]))) / np.sqrt(N)
-def g26(x): return (np.sin(to_radians(x[0]) * to_radians(x[1]))) / np.sqrt(N)
-def g27(x): return (np.cos(to_radians(x[2]) * to_radians(x[3]))) / np.sqrt(N)
+def g13(x): return (np.sin(x[0]) * np.cos(x[1])) / np.sqrt(len(data_points))
+def g14(x): return (np.sin(x[2]) * np.cos(x[3])) / np.sqrt(len(data_points))
+def g15(x): return (np.sin(x[4]) * np.cos(x[5])) / np.sqrt(len(data_points))
 
-
-# Słownik funkcji bazowych
 dictionary = [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12,
-              g13, g14, g15, g16, g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, g27]
+              g13, g14, g15]
 function_names = {f.__name__: f for f in dictionary}
 
-# Funkcja aproksymacji
-def evaluate_approximation(x, approximation_coefficients):
-    result = 0
-    for func_name, alpha in approximation_coefficients.items():
-        if func_name in function_names:
-            result += alpha * function_names[func_name](x)
-    return result
+# Funkcja do obliczania korelacji między residualem a funkcją bazową z regularyzacją L2
+def correlation_with_regularization(residuals, g, lambda_reg):
+    return sum(residual * g(x) for x, residual in residuals) / (1 + lambda_reg)
 
-# Przykład funkcji testującej
-def test_approximation():
-    # Wczytanie danych z CSV
-    data = pd.read_csv(file_name+".csv").iloc[:N]  # Wczytujemy 20 wierszy
-    data_points = [
-    (row[:6], row[6])  # Pierwsze 6 kolumn jako wektor i ostatnia kolumna jako wartość funkcji
-    for row in data.values
-]  # Pierwsze kolumny to wartości wejściowe
-    target_values = data.iloc[:, -1].values  # Ostatnia kolumna to wartości docelowe
+# Implementacja algorytmu Matching Pursuit z regularyzacją L2
+def matching_pursuit(data_points, dictionary, lambda_reg=0.1, max_iter=20, threshold=1e-5):
+    residuals = [(x, y) for x, y in data_points]  # Początkowo residual = wartość funkcji
+    approximation = {g.__name__: 0.0 for g in dictionary}  # Wstępna aproksymacja
 
-    # Wykonanie Matching Pursuit
-    approximation_coefficients = matching_pursuit(data_points, dictionary)
+    for _ in range(max_iter):
+        correlations = [correlation_with_regularization(residuals, g, lambda_reg) for g in dictionary]
+        best_index = np.argmax(np.abs(correlations))
+        best_g = dictionary[best_index]
+        alpha = correlations[best_index]
 
-    print(approximation_coefficients)
+        # Sumujemy współczynniki dla wybranej funkcji
+        approximation[best_g.__name__] += alpha
 
-    # Obliczenie wartości aproksymacji dla każdego wiersza
-    approximations = [
-        evaluate_approximation(x[0], approximation_coefficients)
-        for x in data_points
-    ]
+        # Aktualizujemy residual
+        residuals = [(x, residual - alpha * best_g(x)) for x, residual in residuals]
 
-    relative_errors = [
-        abs((target - approx) / target) * 100 if target != 0 else np.nan
-        for target, approx in zip(target_values, approximations)
-    ]
+        # Przerwanie, jeśli osiągnięto wymaganą dokładność
+        residual_norm = np.sqrt(sum(residual**2 for _, residual in residuals))
+        if residual_norm < threshold:
+            break
 
-    # Dodanie kolumny z wynikami aproksymacji do DataFrame
-    data[f'Approx_{file_name}'] = approximations
-    data['Relative_Error_%'] = relative_errors
+    return approximation
 
-    # Zapis do pliku CSV z wartościami aproksymacji
-    data.to_csv(file_name + "_approx.csv", index=False)
+# Obliczenie wartości aproksymacji oraz błędu względnego
+def evaluate_and_compare(data_points, approximation):
+    results = []
+    relative_errors = []
+    for x, true_value in data_points:
+        approx_value = sum(alpha * function_names[func_name](x) for func_name, alpha in approximation.items())
+        relative_error = np.abs((true_value - approx_value) / true_value) * 100 if true_value != 0 else None
+        results.append((approx_value, true_value, relative_error))
+        if relative_error is not None:  # Pomijamy przypadki, gdzie błąd względny jest niemożliwy do obliczenia
+            relative_errors.append(relative_error)
+    
+    # Obliczenie średniego błędu względnego
+    average_relative_error = np.mean(relative_errors) if relative_errors else None
+    return results, average_relative_error
 
-    # Test: Porównanie wyników
-    print("Porównanie wartości rzeczywistych i aproksymacji (pierwsze 10 wierszy):")
-    print(data[[f'Approx_{file_name}', data.columns[-3], 'Relative_Error_%']].head(10))
-    print(f"Sredni blad wzgledny dla {N} wierszy: {np.mean([relative_error for relative_error in relative_errors if relative_error != np.nan])}")
+# Przykład użycia
+approximation = matching_pursuit(data_points, dictionary, lambda_reg=0.1)
+print("Aproksymacja jako kombinacja funkcji ze słownika:")
+for func_name, alpha in approximation.items():
+    if abs(alpha) > 1e-5:  # Ignorowanie zera
+        print(f"{alpha:.4f} * {func_name}")
 
-# Uruchomienie testu
-test_approximation()
+# Porównanie z wartościami rzeczywistymi, wyliczenie błędów względnych oraz średniego błędu względnego
+results, average_relative_error = evaluate_and_compare(data_points, approximation)
+
+# Wyświetlanie wyników
+print("\nWyniki aproksymacji i błędów względnych:")
+for approx_value, true_value, relative_error in results:
+    print(f"Aproksymacja: {approx_value:.4f}, Wartość rzeczywista: {true_value:.4f}, Błąd względny: {relative_error:.2f}%")
+
+# Wyświetlanie średniego błędu względnego
+if average_relative_error is not None:
+    print(f"\nŚredni błąd względny: {average_relative_error:.2f}%")
+else:
+    print("\nŚredni błąd względny: Brak wartości rzeczywistych do obliczenia błędu.")
