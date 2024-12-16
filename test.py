@@ -1,9 +1,8 @@
 import numpy as np
 import pandas as pd
 
-# Wczytanie danych z pliku CSV, ograniczenie do 20 pierwszych wierszy
-filename = "cy.csv"  # Podaj nazwę pliku
-data = pd.read_csv(filename).iloc[:20]  # Wybieramy pierwsze 20 wierszy
+filename = "cy.csv"  # Wpisz odpowiedni csv (jeden csv --> jedna funkcja aerodynamiczna)
+data = pd.read_csv(filename).iloc[:20]  # Wybieramy pierwsze 20 wierszy (dla przykładu)
 
 # Tworzenie punktów danych bez skalowania
 data_points = [
@@ -11,7 +10,7 @@ data_points = [
     for row in data.values
 ]
 
-# Przekształcanie stopni na radiany
+# Stopnie na radiany
 def to_radians(x):
     return np.radians(x)
 
@@ -43,10 +42,10 @@ function_names = {f.__name__: f for f in dictionary}
 def correlation_with_regularization(residuals, g, lambda_reg):
     return sum(residual * g(x) for x, residual in residuals) / (1 + lambda_reg)
 
-# Implementacja algorytmu Matching Pursuit z regularyzacją L2
+# Algorytm matching pursuit z regularyzacja L2
 def matching_pursuit(data_points, dictionary, lambda_reg=0.1, max_iter=20, threshold=1e-5):
     residuals = [(x, y) for x, y in data_points]  # Początkowo residual = wartość funkcji
-    approximation = {g.__name__: 0.0 for g in dictionary}  # Wstępna aproksymacja
+    approximation = {g.__name__: 0.0 for g in dictionary}  # Wstepna aproksymacja
 
     for _ in range(max_iter):
         correlations = [correlation_with_regularization(residuals, g, lambda_reg) for g in dictionary]
@@ -60,7 +59,7 @@ def matching_pursuit(data_points, dictionary, lambda_reg=0.1, max_iter=20, thres
         # Aktualizujemy residual
         residuals = [(x, residual - alpha * best_g(x)) for x, residual in residuals]
 
-        # Przerwanie, jeśli osiągnięto wymaganą dokładność
+        # Zbreakuj jak osiagnieto zbieznosc
         residual_norm = np.sqrt(sum(residual**2 for _, residual in residuals))
         if residual_norm < threshold:
             break
